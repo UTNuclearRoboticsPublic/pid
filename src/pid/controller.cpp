@@ -47,20 +47,20 @@
 
 void print_usage()
 {
-  printf("Usage for listener app:\n");
-  printf("listener [-t topic_name] [-h]\n");
+  printf("Usage for controller node:\n");
+  printf("controller [-h]\n");
   printf("options:\n");
   printf("-h : Print this help function.\n");
-  printf("-t topic_name : Specify the topic on which to subscribe. Defaults to chatter.\n");
+  printf("TODO: link to web docs\n");
 }
 
-// Create a Listener class that subclasses the generic rclcpp::Node base class.
+// Create a Controller class that subclasses the generic rclcpp::Node base class.
 // The main function below will instantiate the class as a ROS node.
-class Listener : public rclcpp::Node
+class Controller : public rclcpp::Node
 {
 public:
-  explicit Listener(const std::string & topic_name)
-  : Node("listener")
+  explicit Controller(const std::string & topic_name)
+  : Node("controller")
   {
     // Create a callback function for when messages are received.
     // Variations of this function also exist using, for example UniquePtr for zero-copy transport.
@@ -86,6 +86,7 @@ int main(int argc, char * argv[])
   // Force flush of the stdout buffer.
   setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 
+  // Display help?
   if (rcutils_cli_option_exist(argv, argv + argc, "-h")) {
     print_usage();
     return 0;
@@ -97,13 +98,13 @@ int main(int argc, char * argv[])
   rclcpp::init(argc, argv);
 
   // Parse the command line options.
-  auto topic = std::string("chatter");
+  auto topic = std::string("state");
   if (rcutils_cli_option_exist(argv, argv + argc, "-t")) {
     topic = std::string(rcutils_cli_get_option(argv, argv + argc, "-t"));
   }
 
   // Create a node.
-  auto node = std::make_shared<Listener>(topic);
+  auto node = std::make_shared<Controller>(topic);
 
   // spin will block until work comes in, execute work as it becomes available, and keep blocking.
   // It will only be interrupted by Ctrl-C.
