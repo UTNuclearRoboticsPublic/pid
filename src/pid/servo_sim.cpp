@@ -39,40 +39,39 @@
 #include <chrono>
 #include <cstdio>
 #include <memory>
-#include <string>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rcutils/cmdline_parser.h"
 
-#include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/float64.hpp"
 
 using namespace std::chrono_literals;
 
 void print_usage()
 {
-  printf("Usage for talker app:\n");
-  printf("talker [-t topic_name] [-h]\n");
+  printf("Usage for servo_sim node:\n");
+  printf("servo_sim [-h]\n");
   printf("options:\n");
   printf("-h : Print this help function.\n");
-  printf("-t topic_name : Specify the topic on which to publish. Defaults to chatter.\n");
+  printf("TODO: link to web docs\n");
 }
 
-// Create a Talker class that subclasses the generic rclcpp::Node base class.
+// Create a ServoSim class that subclasses the generic rclcpp::Node base class.
 // The main function below will instantiate the class as a ROS node.
-class Talker : public rclcpp::Node
+class ServoSim : public rclcpp::Node
 {
 public:
-  explicit Talker(const std::string & topic_name)
-  : Node("talker")
+  explicit ServoSim()
+  : Node("servo_sim")
   {
-    msg_ = std::make_shared<std_msgs::msg::String>();
+    msg_ = std::make_shared<std_msgs::msg::Float64>();
 
     // Create a function for when messages are to be sent.
     auto publish_message =
       [this]() -> void
       {
-        msg_->data = "Hello Andy! " + std::to_string(count_++);
-        RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", msg_->data.c_str())
+        msg_->data = 1;
+        RCLCPP_INFO(this->get_logger(), "Publishing: '%f'", msg_->data)
 
         // Put the message into a queue to be processed by the middleware.
         // This call is non-blocking.
@@ -82,16 +81,22 @@ public:
     // Create a publisher with a custom Quality of Service profile.
     rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
     custom_qos_profile.depth = 7;
-    pub_ = this->create_publisher<std_msgs::msg::String>(topic_name, custom_qos_profile);
+    pub_ = this->create_publisher<std_msgs::msg::Float64>("state", custom_qos_profile);
 
-    // Use a timer to schedule periodic message publishing.
-    timer_ = this->create_wall_timer(1s, publish_message);
+    // Periodic message publishing.
+    rclcpp::Rate loop_rate(10);
+
+    while (rclcpp::ok())
+    {
+      loop_rate.sleep();
+      publish_message();
+    }
   }
 
 private:
   size_t count_ = 1;
-  std::shared_ptr<std_msgs::msg::String> msg_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_;
+  std::shared_ptr<std_msgs::msg::Float64> msg_;
+  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
@@ -102,6 +107,7 @@ int main(int argc, char * argv[])
   // even when executed simultaneously within the launch file.
   setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 
+  // Display help?
   if (rcutils_cli_option_exist(argv, argv + argc, "-h")) {
     print_usage();
     return 0;
@@ -112,14 +118,8 @@ int main(int argc, char * argv[])
   // This should be called once per process.
   rclcpp::init(argc, argv);
 
-  // Parse the command line options.
-  auto topic = std::string("chatter");
-  if (rcutils_cli_option_exist(argv, argv + argc, "-t")) {
-    topic = std::string(rcutils_cli_get_option(argv, argv + argc, "-t"));
-  }
-
   // Create a node.
-  auto node = std::make_shared<Talker>(topic);
+  auto node = std::make_shared<ServoSim>();
 
   // spin will block until work comes in, execute work as it becomes available, and keep blocking.
   // It will only be interrupted by Ctrl-C.
