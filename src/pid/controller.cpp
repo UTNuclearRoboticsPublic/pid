@@ -43,9 +43,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rcutils/cmdline_parser.h"
 
-#include "std_msgs/msg/float64.hpp"
-
-#include "pid.h"
+#include "pid/pid.h"
 
 void print_usage()
 {
@@ -55,38 +53,6 @@ void print_usage()
   printf("-h : Print this help function.\n");
   printf("TODO: link to web docs\n");
 }
-
-// Create a Controller class that subclasses the generic rclcpp::Node base class.
-// The main function below will instantiate the class as a ROS node.
-// TODO: move this into pid.cpp
-class Controller : public rclcpp::Node
-{
-public:
-  explicit Controller()
-  : Node("controller")
-  {
-    auto state_callback =
-      [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
-      {
-        state_ = msg-> data;
-        RCLCPP_INFO(this->get_logger(), "State: [%f]", state_)
-      };
-
-    auto setpoint_callback =
-      [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
-      {
-        setpoint_ = msg->data;
-        RCLCPP_INFO(this->get_logger(), "Setpoint: [%f]", setpoint_)
-      };
-
-    state_sub_ = create_subscription<std_msgs::msg::Float64>("state", state_callback);
-    setpoint_sub_ = create_subscription<std_msgs::msg::Float64>("setpoint", setpoint_callback);
-  }
-
-private:
-  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr state_sub_, setpoint_sub_;
-  double state_, setpoint_;
-};
 
 int main(int argc, char * argv[])
 {
@@ -104,8 +70,8 @@ int main(int argc, char * argv[])
   // This should be called once per process.
   rclcpp::init(argc, argv);
 
-  // Create a node.
-  auto node = std::make_shared<Controller>();
+  // Create the PID node.
+  auto node = std::make_shared<pid_ns::PID>();
 
   // spin will block until work comes in, execute work as it becomes available, and keep blocking.
   // It will only be interrupted by Ctrl-C.
