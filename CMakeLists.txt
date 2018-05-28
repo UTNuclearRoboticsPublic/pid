@@ -12,16 +12,25 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(example_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rcutils)
-find_package(rmw REQUIRED)
 find_package(std_msgs REQUIRED)
+
+include_directories(include 
+  ${rclcpp_INCLUDE_DIRS}
+)
+
+add_executable(controller src/pid/controller.cpp src/pid/pid.cpp)
+target_link_libraries(controller
+                      ${rclcpp_LIBRARIES}
+                      ${rmw_implementation_LIBRARIES}
+                      ${std_msgs_LIBRARIES})
+install(TARGETS controller DESTINATION lib/${PROJECT_NAME})
+
 
 function(custom_executable subfolder target)
   add_executable(${target} src/${subfolder}/${target}.cpp)
   ament_target_dependencies(${target}
-    "example_interfaces"
     "rclcpp"
     "rcutils"
     "std_msgs")
@@ -29,9 +38,8 @@ function(custom_executable subfolder target)
   DESTINATION lib/${PROJECT_NAME})
 endfunction()
 
-# Tutorials of Publish/Subscribe with Topics
 custom_executable(pid servo_sim)
-custom_executable(pid controller)
+#custom_executable(pid controller)
 custom_executable(pid setpoint)
 
 ament_package()
