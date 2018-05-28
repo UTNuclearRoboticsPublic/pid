@@ -43,7 +43,9 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rcutils/cmdline_parser.h"
 
-#include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/float64.hpp"
+
+#include "pid.h"
 
 void print_usage()
 {
@@ -56,29 +58,34 @@ void print_usage()
 
 // Create a Controller class that subclasses the generic rclcpp::Node base class.
 // The main function below will instantiate the class as a ROS node.
+// TODO: move this into pid.cpp
 class Controller : public rclcpp::Node
 {
 public:
-  explicit Controller(const std::string & topic_name)
+  explicit Controller()
   : Node("controller")
   {
-    // Create a callback function for when messages are received.
-    // Variations of this function also exist using, for example UniquePtr for zero-copy transport.
-    auto callback =
-      [this](const std_msgs::msg::String::SharedPtr msg) -> void
+    auto state_callback =
+      [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
       {
-        RCLCPP_INFO(this->get_logger(), "I heard: [%s]", msg->data.c_str())
+        state_ = msg-> data;
+        RCLCPP_INFO(this->get_logger(), "State: [%f]", state_)
       };
 
-    // Create a subscription to the topic which can be matched with one or more compatible ROS
-    // publishers.
-    // Note that not all publishers on the same topic with the same type will be compatible:
-    // they must have compatible Quality of Service policies.
-    sub_ = create_subscription<std_msgs::msg::String>(topic_name, callback);
+    auto setpoint_callback =
+      [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
+      {
+        setpoint_ = msg->data;
+        RCLCPP_INFO(this->get_logger(), "Setpoint: [%f]", setpoint_)
+      };
+
+    state_sub_ = create_subscription<std_msgs::msg::Float64>("state", state_callback);
+    setpoint_sub_ = create_subscription<std_msgs::msg::Float64>("setpoint", setpoint_callback);
   }
 
 private:
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
+  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr state_sub_, setpoint_sub_;
+  double state_, setpoint_;
 };
 
 int main(int argc, char * argv[])
@@ -97,14 +104,8 @@ int main(int argc, char * argv[])
   // This should be called once per process.
   rclcpp::init(argc, argv);
 
-  // Parse the command line options.
-  auto topic = std::string("state");
-  if (rcutils_cli_option_exist(argv, argv + argc, "-t")) {
-    topic = std::string(rcutils_cli_get_option(argv, argv + argc, "-t"));
-  }
-
   // Create a node.
-  auto node = std::make_shared<Controller>(topic);
+  auto node = std::make_shared<Controller>();
 
   // spin will block until work comes in, execute work as it becomes available, and keep blocking.
   // It will only be interrupted by Ctrl-C.
