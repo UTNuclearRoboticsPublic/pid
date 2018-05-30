@@ -42,7 +42,7 @@
 
 using namespace pid_ns;
 
-PID::PID(int Kp, int Ki, int Kd):
+PID::PID(double Kp, double Ki, double Kd):
   Node("controller"), delta_t_(0, 0)
 {
 	// Callbacks for incoming state and setpoint messages
@@ -64,13 +64,13 @@ PID::PID(int Kp, int Ki, int Kd):
       new_state_or_setpt_ = true;
     };
 
-  state_sub_ = create_subscription<std_msgs::msg::Float64>("state", state_callback);
-  setpoint_sub_ = create_subscription<std_msgs::msg::Float64>("setpoint", setpoint_callback);
+  state_sub_ = create_subscription<std_msgs::msg::Float64>(topic_from_plant_, state_callback);
+  setpoint_sub_ = create_subscription<std_msgs::msg::Float64>(setpoint_topic_, setpoint_callback);
 
   // Create a publisher with a custom Quality of Service profile.
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 7;
-  control_effort_pub_ = this->create_publisher<std_msgs::msg::Float64>("control_effort", custom_qos_profile);
+  control_effort_pub_ = this->create_publisher<std_msgs::msg::Float64>(topic_from_controller_, custom_qos_profile);
 
   // TODO: get these parameters from server,
   // along with the other configurable params (cutoff_frequency_, etc.)
