@@ -14,7 +14,7 @@ namespace pid_ns
 class PID : public rclcpp::Node
 {
 public:
-  explicit PID(int Kp, int Ki, int Kd);
+  explicit PID(double Kp, double Ki, double Kd);
   void doCalcs();
 
   // Primary output variable
@@ -49,6 +49,10 @@ private:
   // Cutoff frequency for the derivative calculation in Hz.
   // Negative -> Has not been set by the user yet, so use a default.
   double cutoff_frequency_ = -1;
+
+  std::string topic_from_controller_ = "control_effort";
+  std::string topic_from_plant_ = "state";
+  std::string setpoint_topic_ = "setpoint";
 
   //////////////////////////////////
   // Used for internal calculations:
@@ -86,7 +90,6 @@ private:
   ///////////////////////////////////////////
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr control_effort_pub_;
 
-  std::string topic_from_controller_, topic_from_plant_, setpoint_topic_, pid_enable_topic_;
   std_msgs::msg::Float64 control_msg_, state_msg_;
 };
 }  // end pid namespace
