@@ -36,6 +36,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+// Take control_effort messages, run a servo simulation, and publish state messages.
+
 #include <cstdio>
 #include <memory>
 
@@ -50,7 +52,6 @@ void print_usage()
   printf("servo_sim [-h]\n");
   printf("options:\n");
   printf("-h : Print this help function.\n");
-  printf("TODO: link to web docs\n");
 }
 
 // Create a ServoSim class that subclasses the generic rclcpp::Node base class.

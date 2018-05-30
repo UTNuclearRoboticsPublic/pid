@@ -36,6 +36,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+// Instantiate a PID node.
+
 #include <cstdio>
 #include <memory>
 #include <string>
@@ -71,7 +73,7 @@ int main(int argc, char * argv[])
   rclcpp::init(argc, argv);
 
   // Create the PID node.
-  auto my_pid = std::make_shared<pid_ns::PID>();
+  auto my_pid = std::make_shared<pid_ns::PID>(5, 0.1, 0.1);
 
   // Respond to inputs until shut down
   // TODO: make this rate configurable
