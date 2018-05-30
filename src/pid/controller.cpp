@@ -74,8 +74,8 @@ int main(int argc, char * argv[])
   auto my_pid = std::make_shared<pid_ns::PID>();
 
   // Respond to inputs until shut down
-  // TODO: make this pause configurable
-  std::chrono::duration<int, std::milli> pause(5);
+  // TODO: make this rate configurable
+  rclcpp::Rate loop_rate(200);
   while (rclcpp::ok())
   {
     rclcpp::spin_some( my_pid );
@@ -83,7 +83,7 @@ int main(int argc, char * argv[])
     my_pid->doCalcs();
 
     // Add a small sleep to avoid 100% CPU usage
-    rclcpp::sleep_for( pause );
+    loop_rate.sleep();
   }
 
   rclcpp::shutdown();
