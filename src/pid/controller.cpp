@@ -71,11 +71,20 @@ int main(int argc, char * argv[])
   rclcpp::init(argc, argv);
 
   // Create the PID node.
-  auto node = std::make_shared<pid_ns::PID>();
+  auto my_pid = std::make_shared<pid_ns::PID>();
 
-  // spin will block until work comes in, execute work as it becomes available, and keep blocking.
-  // It will only be interrupted by Ctrl-C.
-  rclcpp::spin(node);
+  // Respond to inputs until shut down
+  // TODO: make this pause configurable
+  std::chrono::duration<int, std::milli> pause(5);
+  while (rclcpp::ok())
+  {
+    rclcpp::spin_some( my_pid );
+
+    my_pid->doCalcs();
+
+    // Add a small sleep to avoid 100% CPU usage
+    rclcpp::sleep_for( pause );
+  }
 
   rclcpp::shutdown();
   return 0;

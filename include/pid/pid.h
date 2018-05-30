@@ -15,12 +15,12 @@ class PID : public rclcpp::Node
 {
 public:
   explicit PID();
+  void doCalcs();
 
   // Primary output variable
   double control_effort_ = 0;        // output of pid controller
 
 private:
-  void doCalcs();
   void printParameters();
   bool validateParameters();
 
@@ -69,7 +69,10 @@ private:
   double windup_limit_ = 1000;
 
   // Initialize filter data with zeros
-  std::vector<double> error_, filtered_error_, error_deriv_, filtered_error_deriv_;
+  std::vector<double> error_ = std::vector<double>(3,0);
+  std::vector<double> filtered_error_ = std::vector<double>(3,0);
+  std::vector<double> error_deriv_ = std::vector<double>(3,0);
+  std::vector<double> filtered_error_deriv_ = std::vector<double>(3,0);
 
   // Topic and node names and message objects
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr control_effort_pub_;
