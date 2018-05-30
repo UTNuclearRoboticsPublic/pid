@@ -42,4 +42,8 @@ custom_executable(pid servo_sim)
 #custom_executable(pid controller)
 custom_executable(pid setpoint)
 
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
+
 ament_package()

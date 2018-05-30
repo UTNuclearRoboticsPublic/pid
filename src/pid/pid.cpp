@@ -36,11 +36,13 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+// Perform PID calculations.
+
 #include <pid/pid.h>
 
 using namespace pid_ns;
 
-PID::PID():
+PID::PID(int Kp, int Ki, int Kd):
   Node("controller"), delta_t_(0, 0)
 {
 	// Callbacks for incoming state and setpoint messages
@@ -70,12 +72,11 @@ PID::PID():
   custom_qos_profile.depth = 7;
   control_effort_pub_ = this->create_publisher<std_msgs::msg::Float64>("control_effort", custom_qos_profile);
 
-  // TODO: wait for ROS timer to start
-
-  // TODO: get parameters from server
-  Kp_ = 1;
-  Ki_ = 0;
-  Kd_ = 0;
+  // TODO: get these parameters from server,
+  // along with the other configurable params (cutoff_frequency_, etc.)
+  Kp_ = Kp;
+  Ki_ = Ki;
+  Kd_ = Kd;
 
   printParameters();
 
@@ -126,25 +127,25 @@ void PID::doCalcs()
                "stability.");
     }
 
-    error_.at(2) = error_.at(1);
-    error_.at(1) = error_.at(0);
-    error_.at(0) = setpoint_ - plant_state_;  // Current error goes to slot 0
+    error_[2] = error_[1];
+    error_[1] = error_[0];
+    error_[0] = setpoint_ - plant_state_;  // Current error goes to slot 0
 
     // If the angle_error param is true, then address discontinuity in error
     // calc.
     // For example, this maintains an angular error between -180:180.
     if (angle_error_)
     {
-      while (error_.at(0) < -1.0 * angle_wrap_ / 2.0)
-        error_.at(0) += angle_wrap_;
-      while (error_.at(0) > angle_wrap_ / 2.0)
-        error_.at(0) -= angle_wrap_;
+      while (error_[0] < -1.0 * angle_wrap_ / 2.0)
+        error_[0] += angle_wrap_;
+      while (error_[0] > angle_wrap_ / 2.0)
+        error_[0] -= angle_wrap_;
 
       // The proportional error will flip sign, but the integral error
       // won't and the derivative error will be poorly defined. So,
       // reset them.
-      error_.at(2) = 0.;
-      error_.at(1) = 0.;
+      error_[2] = 0.;
+      error_[1] = 0.;
       error_integral_ = 0.;
     }
 
@@ -167,7 +168,7 @@ void PID::doCalcs()
     }
 
     // integrate the error
-    error_integral_ += error_.at(0) * delta_t_.nanoseconds()/1e9;
+    error_integral_ += error_[0] * delta_t_.nanoseconds()/1e9;
 
     // Apply windup limit to limit the size of the integral term
     if (error_integral_ > fabsf(windup_limit_))
@@ -192,30 +193,30 @@ void PID::doCalcs()
       c_ = 1 / tan_filt_;
     }
 
-    filtered_error_.at(2) = filtered_error_.at(1);
-    filtered_error_.at(1) = filtered_error_.at(0);
-    filtered_error_.at(0) = (1 / (1 + c_ * c_ + 1.414 * c_)) * (error_.at(2) + 2 * error_.at(1) + error_.at(0) -
-                                                                (c_ * c_ - 1.414 * c_ + 1) * filtered_error_.at(2) -
-                                                                (-2 * c_ * c_ + 2) * filtered_error_.at(1));
+    filtered_error_[2] = filtered_error_[1];
+    filtered_error_[1] = filtered_error_[0];
+    filtered_error_[0] = (1 / (1 + c_ * c_ + 1.414 * c_)) * (error_[2] + 2 * error_[1] + error_[0] -
+                                                                (c_ * c_ - 1.414 * c_ + 1) * filtered_error_[2] -
+                                                                (-2 * c_ * c_ + 2) * filtered_error_[1]);
 
     // Take derivative of error
     // First the raw, unfiltered data:
-    error_deriv_.at(2) = error_deriv_.at(1);
-    error_deriv_.at(1) = error_deriv_.at(0);
-    error_deriv_.at(0) = (error_.at(0) - error_.at(1)) / delta_t_.nanoseconds()/1e9;
+    error_deriv_[2] = error_deriv_[1];
+    error_deriv_[1] = error_deriv_[0];
+    error_deriv_[0] = (error_[0] - error_[1]) / delta_t_.nanoseconds()/1e9;
 
-    filtered_error_deriv_.at(2) = filtered_error_deriv_.at(1);
-    filtered_error_deriv_.at(1) = filtered_error_deriv_.at(0);
+    filtered_error_deriv_[2] = filtered_error_deriv_[1];
+    filtered_error_deriv_[1] = filtered_error_deriv_[0];
 
-    filtered_error_deriv_.at(0) =
+    filtered_error_deriv_[0] =
         (1 / (1 + c_ * c_ + 1.414 * c_)) *
-        (error_deriv_.at(2) + 2 * error_deriv_.at(1) + error_deriv_.at(0) -
-         (c_ * c_ - 1.414 * c_ + 1) * filtered_error_deriv_.at(2) - (-2 * c_ * c_ + 2) * filtered_error_deriv_.at(1));
+        (error_deriv_[2] + 2 * error_deriv_[1] + error_deriv_[0] -
+         (c_ * c_ - 1.414 * c_ + 1) * filtered_error_deriv_[2] - (-2 * c_ * c_ + 2) * filtered_error_deriv_[1]);
 
     // calculate the control effort
-    proportional_ = Kp_ * filtered_error_.at(0);
+    proportional_ = Kp_ * filtered_error_[0];
     integral_ = Ki_ * error_integral_;
-    derivative_ = Kd_ * filtered_error_deriv_.at(0);
+    derivative_ = Kd_ * filtered_error_deriv_[0];
     control_effort_ = proportional_ + integral_ + derivative_;
 
     // Apply saturation limits
