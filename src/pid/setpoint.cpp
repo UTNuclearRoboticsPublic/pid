@@ -36,7 +36,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <chrono>
 #include <cstdio>
 #include <memory>
 
@@ -44,8 +43,6 @@
 #include "rcutils/cmdline_parser.h"
 
 #include "std_msgs/msg/float64.hpp"
-
-using namespace std::chrono_literals;
 
 void print_usage()
 {
@@ -71,10 +68,6 @@ public:
       [this](double& setpoint) -> void
       {
         msg_->data = setpoint;
-        RCLCPP_INFO(this->get_logger(), "Publishing: '%f'", msg_->data)
-
-        // Put the message into a queue to be processed by the middleware.
-        // This call is non-blocking.
         pub_->publish(msg_);
       };
 
@@ -83,8 +76,8 @@ public:
     custom_qos_profile.depth = 7;
     pub_ = this->create_publisher<std_msgs::msg::Float64>("setpoint", custom_qos_profile);
 
-    // Negate the setpoint every ~3 seconds
-    rclcpp::Rate loop_rate(0.33);
+    // Negate the setpoint every 5 seconds
+    rclcpp::Rate loop_rate(0.2);
 
     double setpoint = 1;
 
@@ -97,10 +90,8 @@ public:
   }
 
 private:
-  size_t count_ = 1;
   std::shared_ptr<std_msgs::msg::Float64> msg_;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_;
-  rclcpp::TimerBase::SharedPtr timer_;
 };
 
 int main(int argc, char * argv[])

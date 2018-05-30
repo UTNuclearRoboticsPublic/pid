@@ -73,9 +73,9 @@ PID::PID():
   // TODO: wait for ROS timer to start
 
   // TODO: get parameters from server
-  Kp_ = 0.1;
-  Ki_ = 0.05;
-  Kd_ = 0.01;
+  Kp_ = 1;
+  Ki_ = 0;
+  Kd_ = 0;
 
   printParameters();
 
@@ -223,16 +223,16 @@ void PID::doCalcs()
       control_effort_ = upper_limit_;
     else if (control_effort_ < lower_limit_)
       control_effort_ = lower_limit_;
-
-    // Publish the stabilizing control effort if the controller is enabled
-    if (pid_enabled_)
-    {
-      control_msg_.data = control_effort_;
-      control_effort_pub_->publish(control_msg_);
-    }
-    else
-      error_integral_ = 0.0;
   }
+
+  // Publish the stabilizing control effort if the controller is enabled
+  if (pid_enabled_)
+  {
+    control_msg_.data = control_effort_;
+    control_effort_pub_->publish(control_msg_);
+  }
+  else
+    error_integral_ = 0.0;
 
   new_state_or_setpt_ = false;
 }

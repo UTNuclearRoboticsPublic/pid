@@ -36,7 +36,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <chrono>
 #include <cstdio>
 #include <memory>
 
@@ -44,8 +43,6 @@
 #include "rcutils/cmdline_parser.h"
 
 #include "std_msgs/msg/float64.hpp"
-
-using namespace std::chrono_literals;
 
 void print_usage()
 {
@@ -62,42 +59,58 @@ class ServoSim : public rclcpp::Node
 {
 public:
   explicit ServoSim()
-  : Node("servo_sim")
+  : Node("servo_sim"), delta_t_(0, 0)
   {
-    msg_ = std::make_shared<std_msgs::msg::Float64>();
-
-    // Create a function for when messages are to be sent.
-    auto publish_message =
-      [this]() -> void
-      {
-        msg_->data = 1;
-        RCLCPP_INFO(this->get_logger(), "Publishing: '%f'", msg_->data)
-
-        // Put the message into a queue to be processed by the middleware.
-        // This call is non-blocking.
-        pub_->publish(msg_);
-      };
+    state_msg_ = std::make_shared<std_msgs::msg::Float64>();
 
     // Create a publisher with a custom Quality of Service profile.
     rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
     custom_qos_profile.depth = 7;
-    pub_ = this->create_publisher<std_msgs::msg::Float64>("state", custom_qos_profile);
+    state_pub_ = this->create_publisher<std_msgs::msg::Float64>("state", custom_qos_profile);
 
-    // Periodic message publishing.
-    rclcpp::Rate loop_rate(10);
-
-    while (rclcpp::ok())
+    // Callback for incoming control_effort messages
+    auto control_effort_callback =
+    [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
     {
-      loop_rate.sleep();
-      publish_message();
-    }
+      control_effort_ = msg-> data;
+    };
+
+    control_effort_sub_ = create_subscription<std_msgs::msg::Float64>("control_effort", control_effort_callback);
+
+    prev_time_ = this->now();
+  }
+
+  void simulate()
+  {
+    delta_t_ = this->now() - prev_time_;
+    prev_time_ = this->now();
+
+    decel_force_ = -(speed_ * friction_);  // can be +ve or -ve. Linear with speed
+    acceleration_ = ((Kv_ * (control_effort_ - (Kbackemf_ * speed_)) + decel_force_) / mass_);  // a = F/m
+    speed_ = speed_ + (acceleration_ * delta_t_.nanoseconds()/1e9);
+    displacement_ = displacement_ + speed_ * delta_t_.nanoseconds()/1e9;
+    state_msg_->data = displacement_;
+
+    state_pub_->publish(state_msg_);
   }
 
 private:
-  size_t count_ = 1;
-  std::shared_ptr<std_msgs::msg::Float64> msg_;
-  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  std::shared_ptr<std_msgs::msg::Float64> state_msg_;
+  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr state_pub_;
+  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr control_effort_sub_;
+  double control_effort_ = 0;
+  rclcpp::Time prev_time_;
+  rclcpp::Duration delta_t_;
+
+  // Simulation parameters (servo-motor with load)
+  double speed_ = 0;         // meters/sec
+  double acceleration_ = 0;  // meters/sec^2
+  double mass_ = 0.1;        // in kg
+  double friction_ = 1.0;    // a decelerating force factor
+  double Kv_ = 1;            // motor constant: force (newtons) / volt
+  double Kbackemf_ = 0;      // Volts of back-emf per meter/sec of speed
+  double decel_force_ = 0;   // decelerating force
+  double displacement_ = 0;  // meters
 };
 
 int main(int argc, char * argv[])
@@ -119,11 +132,19 @@ int main(int argc, char * argv[])
   rclcpp::init(argc, argv);
 
   // Create a node.
-  auto node = std::make_shared<ServoSim>();
+  auto my_sim = std::make_shared<ServoSim>();
 
-  // spin will block until work comes in, execute work as it becomes available, and keep blocking.
-  // It will only be interrupted by Ctrl-C.
-  rclcpp::spin(node);
+  // Simulate until shut down
+  rclcpp::Rate loop_rate(100);
+  while (rclcpp::ok())
+  {
+    rclcpp::spin_some( my_sim );
+
+    my_sim->simulate();
+
+    // Add a small sleep to avoid 100% CPU usage
+    loop_rate.sleep();
+  }
 
   rclcpp::shutdown();
   return 0;
