@@ -68,7 +68,7 @@ PID::PID():
   // Create a publisher with a custom Quality of Service profile.
   rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
   custom_qos_profile.depth = 7;
-  control_effort_pub_ = this->create_publisher<std_msgs::msg::Float64>("setpoint", custom_qos_profile);
+  control_effort_pub_ = this->create_publisher<std_msgs::msg::Float64>("control_effort", custom_qos_profile);
 
   // TODO: wait for ROS timer to start
 
@@ -81,16 +81,6 @@ PID::PID():
 
   if (not validateParameters())
     std::cout << "Error: invalid parameter\n";
-
-  // Respond to inputs until shut down
-  std::chrono::duration<int, std::milli> pause(10);
-  while (rclcpp::ok())
-  {
-    doCalcs();
-
-    // Add a small sleep to avoid 100% CPU usage
-    rclcpp::sleep_for( pause );
-  }
 }
 
 void PID::printParameters()
@@ -131,8 +121,10 @@ void PID::doCalcs()
   {
     if (!((Kp_ <= 0. && Ki_ <= 0. && Kd_ <= 0.) ||
           (Kp_ >= 0. && Ki_ >= 0. && Kd_ >= 0.)))  // All 3 gains should have the same sign
+    {
       RCLCPP_WARN(this->get_logger(), "All three gains (Kp, Ki, Kd) should have the same sign for "
                "stability.");
+    }
 
     error_.at(2) = error_.at(1);
     error_.at(1) = error_.at(0);
@@ -157,7 +149,7 @@ void PID::doCalcs()
     }
 
     // calculate delta_t
-    if ( delta_t_.nanoseconds()!=0 )  // Not first time through the program
+    if ( prev_time_.nanoseconds()!=0 )  // Not first time through the program
     {
       delta_t_ = this->now() - prev_time_;
       prev_time_ = this->now();
@@ -175,7 +167,7 @@ void PID::doCalcs()
     }
 
     // integrate the error
-    error_integral_ += error_.at(0) * delta_t_.nanoseconds()*1000000000;
+    error_integral_ += error_.at(0) * delta_t_.nanoseconds()/1e9;
 
     // Apply windup limit to limit the size of the integral term
     if (error_integral_ > fabsf(windup_limit_))
@@ -189,7 +181,7 @@ void PID::doCalcs()
     if (cutoff_frequency_ != -1)
     {
       // Check if tan(_) is really small, could cause c = NaN
-      tan_filt_ = tan((cutoff_frequency_ * 6.2832) * (delta_t_.nanoseconds()*1000000000) / 2);
+      tan_filt_ = tan((cutoff_frequency_ * 6.2832) * (delta_t_.nanoseconds()/1e9) / 2);
 
       // Avoid tan(0) ==> NaN
       if ((tan_filt_ <= 0.) && (tan_filt_ > -0.01))
@@ -210,7 +202,7 @@ void PID::doCalcs()
     // First the raw, unfiltered data:
     error_deriv_.at(2) = error_deriv_.at(1);
     error_deriv_.at(1) = error_deriv_.at(0);
-    error_deriv_.at(0) = (error_.at(0) - error_.at(1)) / delta_t_.nanoseconds()*1000000000;
+    error_deriv_.at(0) = (error_.at(0) - error_.at(1)) / delta_t_.nanoseconds()/1e9;
 
     filtered_error_deriv_.at(2) = filtered_error_deriv_.at(1);
     filtered_error_deriv_.at(1) = filtered_error_deriv_.at(0);
