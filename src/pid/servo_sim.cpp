@@ -65,8 +65,7 @@ public:
     state_msg_ = std::make_shared<std_msgs::msg::Float64>();
 
     // Create a publisher with a custom Quality of Service profile.
-    rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
-    custom_qos_profile.depth = 7;
+    rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
     state_pub_ = this->create_publisher<std_msgs::msg::Float64>("state", custom_qos_profile);
 
     // Callback for incoming control_effort messages

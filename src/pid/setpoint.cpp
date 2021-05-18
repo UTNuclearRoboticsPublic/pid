@@ -74,8 +74,7 @@ public:
       };
 
     // Create a publisher with a custom Quality of Service profile.
-    rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
-    custom_qos_profile.depth = 7;
+    rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
     pub_ = this->create_publisher<std_msgs::msg::Float64>("setpoint", custom_qos_profile);
 
     // Negate the setpoint every 5 seconds
