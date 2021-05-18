@@ -84,8 +84,8 @@ public:
 
   void publish_message(double& setpoint)
   {
-      msg_.data = setpoint;
-      pub_->publish(msg_);
+    msg_.data = setpoint;
+    pub_->publish(msg_);
   }
 
 private:
