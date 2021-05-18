@@ -66,8 +66,8 @@ public:
     msg_ = std_msgs::msg::Float64();
 
     // Create a publisher with a custom Quality of Service profile.
-    rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
-    pub_ = this->create_publisher<std_msgs::msg::Float64>("setpoint", custom_qos_profile);
+    // rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
+    pub_ = this->create_publisher<std_msgs::msg::Float64>("setpoint", 10);
 
     // Negate the setpoint every 5 seconds
     rclcpp::Rate loop_rate(0.2);

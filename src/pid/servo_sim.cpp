@@ -66,8 +66,8 @@ public:
     state_msg_ = std_msgs::msg::Float64();
 
     // Create a publisher with a custom Quality of Service profile.
-    rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
-    state_pub_ = this->create_publisher<std_msgs::msg::Float64>("state", custom_qos_profile);
+    // rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
+    state_pub_ = this->create_publisher<std_msgs::msg::Float64>("state", 10);
 
     control_effort_sub_ = this->create_subscription<std_msgs::msg::Float64>("control_effort", 10, std::bind(&ServoSim::control_effort_callback, this, _1));
 
