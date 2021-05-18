@@ -14,7 +14,7 @@ namespace pid_ns
 class PID : public rclcpp::Node
 {
 public:
-  explicit PID(double Kp, double Ki, double Kd);
+  explicit PID();
   void doCalcs();
 
   // Primary output variable

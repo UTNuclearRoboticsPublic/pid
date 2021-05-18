@@ -43,7 +43,7 @@
 using namespace pid_ns;
 using std::placeholders::_1;
 
-PID::PID(double Kp, double Ki, double Kd):
+PID::PID():
   Node("controller"), delta_t_(0, 0)
 {
 
@@ -51,14 +51,17 @@ PID::PID(double Kp, double Ki, double Kd):
   setpoint_sub_ = this->create_subscription<std_msgs::msg::Float64>(setpoint_topic_, 10, std::bind(&PID::setpoint_callback, this, _1));
 
   // Create a publisher with a custom Quality of Service profile.
-  rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
-  control_effort_pub_ = this->create_publisher<std_msgs::msg::Float64>(topic_from_controller_, custom_qos_profile);
+  // rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
+  control_effort_pub_ = this->create_publisher<std_msgs::msg::Float64>(topic_from_controller_, 10);
 
-  // TODO: get these parameters from server,
-  // along with the other configurable params (cutoff_frequency_, etc.)
-  Kp_ = Kp;
-  Ki_ = Ki;
-  Kd_ = Kd;
+  // Declare parameters
+  this->declare_parameter<double>("Kp", 1.0);
+  this->declare_parameter<double>("Ki", 0.0);
+  this->declare_parameter<double>("Kd", 0.0);
+  this->declare_parameter<double>("upper_limit", 1000.0);
+  this->declare_parameter<double>("lower_limit", -1000.0);
+  this->declare_parameter<double>("windup_limit", -1000.0);
+  this->declare_parameter<double>("cutoff_frequency", -1.0);
 
   printParameters();
 
@@ -120,6 +123,17 @@ void PID::doCalcs()
   // Do fresh calcs if knowledge of the system has changed.
   if (new_state_or_setpt_)
   {
+
+      // Get parameters from the server
+      this->get_parameter("Kp", Kp_);
+      this->get_parameter("Ki", Ki_);
+      this->get_parameter("Kd", Kd_);
+      this->get_parameter("upper_limit", upper_limit_);
+      this->get_parameter("lower_limit", lower_limit_);
+      this->get_parameter("windup_limit", windup_limit_);
+      this->get_parameter("cutoff_frequency", cutoff_frequency_);
+
+    
     if (!((Kp_ <= 0. && Ki_ <= 0. && Kd_ <= 0.) ||
           (Kp_ >= 0. && Ki_ >= 0. && Kd_ >= 0.)))  // All 3 gains should have the same sign
     {
