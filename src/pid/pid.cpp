@@ -74,7 +74,7 @@ PID::PID():
 void PID::state_callback(const std_msgs::msg::Float64::SharedPtr msg)
 {
   plant_state_ = msg->data;
-  RCLCPP_INFO(this->get_logger(), "State: [%f]", plant_state_);
+  RCLCPP_DEBUG(this->get_logger(), "State: [%f]", plant_state_);
 
   new_state_or_setpt_ = true;
 }
@@ -82,7 +82,7 @@ void PID::state_callback(const std_msgs::msg::Float64::SharedPtr msg)
 void PID::setpoint_callback(const std_msgs::msg::Float64::SharedPtr msg)
 {
   setpoint_ = msg->data;
-  RCLCPP_INFO(this->get_logger(), "Setpoint: [%f]", setpoint_);
+  RCLCPP_DEBUG(this->get_logger(), "Setpoint: [%f]", setpoint_);
 
   new_state_or_setpt_ = true;
 }

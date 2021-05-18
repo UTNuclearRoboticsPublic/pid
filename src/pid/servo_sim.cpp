@@ -94,7 +94,7 @@ private:
   void control_effort_callback(const std_msgs::msg::Float64::SharedPtr msg)
   {
      control_effort_ = msg->data;
-     RCLCPP_INFO(this->get_logger(), "control effort: [%f]", control_effort_);
+     RCLCPP_DEBUG(this->get_logger(), "control effort: [%f]", control_effort_);
   }
 
   std_msgs::msg::Float64 state_msg_;
