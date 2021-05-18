@@ -74,13 +74,6 @@ public:
     prev_time_ = this->now();
   }
 
-  // Callback for incoming control_effort messages
-  void control_effort_callback(const std_msgs::msg::Float64::SharedPtr msg)
-  {
-     control_effort_ = msg->data;
-     RCLCPP_INFO(this->get_logger(), "control effort: [%f]", control_effort_);
-  }
-
   void simulate()
   {
     delta_t_ = this->now() - prev_time_;
@@ -96,6 +89,14 @@ public:
   }
 
 private:
+
+  // Callback for incoming control_effort messages
+  void control_effort_callback(const std_msgs::msg::Float64::SharedPtr msg)
+  {
+     control_effort_ = msg->data;
+     RCLCPP_INFO(this->get_logger(), "control effort: [%f]", control_effort_);
+  }
+
   std_msgs::msg::Float64 state_msg_;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr state_pub_;
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr control_effort_sub_;
