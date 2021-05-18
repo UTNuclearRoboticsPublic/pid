@@ -21,6 +21,8 @@ public:
   double control_effort_ = 0;
 
 private:
+  void state_callback(const std_msgs::msg::Float64::SharedPtr msg);
+  void setpoint_callback(const std_msgs::msg::Float64::SharedPtr msg);
   void printParameters();
   bool validateParameters();
 

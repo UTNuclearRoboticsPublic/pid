@@ -41,31 +41,14 @@
 #include <pid/pid.h>
 
 using namespace pid_ns;
+using std::placeholders::_1;
 
 PID::PID(double Kp, double Ki, double Kd):
   Node("controller"), delta_t_(0, 0)
 {
-	// Callbacks for incoming state and setpoint messages
-  auto state_callback =
-    [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
-    {
-      plant_state_ = msg-> data;
-      RCLCPP_INFO(this->get_logger(), "State: [%f]", plant_state_)
 
-      new_state_or_setpt_ = true;
-    };
-
-  auto setpoint_callback =
-    [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
-    {
-      setpoint_ = msg->data;
-      RCLCPP_INFO(this->get_logger(), "Setpoint: [%f]", setpoint_)
-
-      new_state_or_setpt_ = true;
-    };
-
-  state_sub_ = create_subscription<std_msgs::msg::Float64>(topic_from_plant_, state_callback);
-  setpoint_sub_ = create_subscription<std_msgs::msg::Float64>(setpoint_topic_, setpoint_callback);
+  state_sub_ = this->create_subscription<std_msgs::msg::Float64>(topic_from_plant_, 10, std::bind(&PID::state_callback, this, _1));
+  setpoint_sub_ = this->create_subscription<std_msgs::msg::Float64>(setpoint_topic_, 10, std::bind(&PID::setpoint_callback, this, _1));
 
   // Create a publisher with a custom Quality of Service profile.
   rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
@@ -81,6 +64,24 @@ PID::PID(double Kp, double Ki, double Kd):
 
   if (not validateParameters())
     std::cout << "Error: invalid parameter\n";
+}
+
+
+// Callbacks for incoming state message
+void PID::state_callback(const std_msgs::msg::Float64::SharedPtr msg)
+{
+  plant_state_ = msg->data;
+  RCLCPP_INFO(this->get_logger(), "State: [%f]", plant_state_);
+
+  new_state_or_setpt_ = true;
+}
+
+void PID::setpoint_callback(const std_msgs::msg::Float64::SharedPtr msg)
+{
+  setpoint_ = msg->data;
+  RCLCPP_INFO(this->get_logger(), "Setpoint: [%f]", setpoint_);
+
+  new_state_or_setpt_ = true;
 }
 
 void PID::printParameters()
