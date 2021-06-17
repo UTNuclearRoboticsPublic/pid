@@ -41,7 +41,7 @@ private:
   // PID gains
   double Kp_ = 0, Ki_ = 0, Kd_ = 0;
 
-  // Parameters for error calc. with disconinuous input
+  // Parameters for error calc. with discontinuous input
   bool angle_error_ = false;
   double angle_wrap_ = 2.0 * 3.14159;
 
