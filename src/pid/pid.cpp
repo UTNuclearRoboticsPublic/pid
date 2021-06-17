@@ -58,10 +58,12 @@ PID::PID():
   this->declare_parameter<double>("Kp", 1.0);
   this->declare_parameter<double>("Ki", 0.0);
   this->declare_parameter<double>("Kd", 0.0);
-  this->declare_parameter<double>("upper_limit", 1000.0);
   this->declare_parameter<double>("lower_limit", -1000.0);
+  this->declare_parameter<double>("upper_limit", 1000.0);
   this->declare_parameter<double>("windup_limit", -1000.0);
   this->declare_parameter<double>("cutoff_frequency", -1.0);
+  this->declare_parameter<bool>("angle_error", false);
+  this->declare_parameter<bool>("pid_enabled", true);
 
   printParameters();
 
@@ -128,10 +130,12 @@ void PID::doCalcs()
       this->get_parameter("Kp", Kp_);
       this->get_parameter("Ki", Ki_);
       this->get_parameter("Kd", Kd_);
-      this->get_parameter("upper_limit", upper_limit_);
       this->get_parameter("lower_limit", lower_limit_);
+      this->get_parameter("upper_limit", upper_limit_);
       this->get_parameter("windup_limit", windup_limit_);
       this->get_parameter("cutoff_frequency", cutoff_frequency_);
+      this->get_parameter("angle_error", angle_error_);
+      this->get_parameter("pid_enabled", pid_enabled_);
 
     
     if (!((Kp_ <= 0. && Ki_ <= 0. && Kd_ <= 0.) ||
