@@ -45,6 +45,7 @@
 #include "rcutils/cmdline_parser.h"
 
 #include "std_msgs/msg/float64.hpp"
+using std::placeholders::_1;
 
 void print_usage()
 {
@@ -62,21 +63,13 @@ public:
   explicit ServoSim()
   : Node("servo_sim"), delta_t_(0, 0)
   {
-    state_msg_ = std::make_shared<std_msgs::msg::Float64>();
+    state_msg_ = std_msgs::msg::Float64();
 
     // Create a publisher with a custom Quality of Service profile.
-    rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
-    custom_qos_profile.depth = 7;
-    state_pub_ = this->create_publisher<std_msgs::msg::Float64>("state", custom_qos_profile);
+    // rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
+    state_pub_ = this->create_publisher<std_msgs::msg::Float64>("state", 10);
 
-    // Callback for incoming control_effort messages
-    auto control_effort_callback =
-    [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
-    {
-      control_effort_ = msg-> data;
-    };
-
-    control_effort_sub_ = create_subscription<std_msgs::msg::Float64>("control_effort", control_effort_callback);
+    control_effort_sub_ = this->create_subscription<std_msgs::msg::Float64>("control_effort", 10, std::bind(&ServoSim::control_effort_callback, this, _1));
 
     prev_time_ = this->now();
   }
@@ -90,13 +83,20 @@ public:
     acceleration_ = ((Kv_ * (control_effort_ - (Kbackemf_ * speed_)) + decel_force_) / mass_);  // a = F/m
     speed_ = speed_ + (acceleration_ * delta_t_.nanoseconds()/1e9);
     displacement_ = displacement_ + speed_ * delta_t_.nanoseconds()/1e9;
-    state_msg_->data = displacement_;
-
+    state_msg_.data = displacement_;
+    
     state_pub_->publish(state_msg_);
   }
 
 private:
-  std::shared_ptr<std_msgs::msg::Float64> state_msg_;
+  // Callback for incoming control_effort messages
+  void control_effort_callback(const std_msgs::msg::Float64::SharedPtr msg)
+  {
+     control_effort_ = msg->data;
+     RCLCPP_DEBUG(this->get_logger(), "control effort: [%f]", control_effort_);
+  }
+
+  std_msgs::msg::Float64 state_msg_;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr state_pub_;
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr control_effort_sub_;
   double control_effort_ = 0;

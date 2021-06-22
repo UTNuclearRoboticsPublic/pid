@@ -36,30 +36,24 @@
 ##
 ###############################################################################
 
-from launch.exit_handler import default_exit_handler, restart_exit_handler
-from ros2run.api import get_executable_path
+from launch import LaunchDescription
+from launch_ros.actions import Node
 
-
-def launch(launch_descriptor, argv):
-    ld = launch_descriptor
-    package = 'pid'
-    ld.add_process(
-        cmd=[get_executable_path(package_name=package, executable_name='controller')],
-        name='controller',
-        exit_handler=restart_exit_handler,
-    )
-    package = 'pid'
-    ld.add_process(
-        cmd=[get_executable_path(package_name=package, executable_name='setpoint')],
-        name='setpoint',
-        exit_handler=restart_exit_handler,
-    )
-    package = 'pid'
-    ld.add_process(
-        cmd=[get_executable_path(package_name=package, executable_name='servo_sim')],
-        name='servo_sim',
-        # The joy node is required, die if it dies
-        exit_handler=restart_exit_handler,
-    )
-
-    return ld
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package='pid',
+            executable='controller',
+            name='controller'
+        ),
+        Node(
+            package='pid',
+            executable='setpoint',
+            name='setpoint'
+        ),
+        Node(
+            package='pid',
+            executable='servo_sim',
+            name='servo_sim'
+        )
+    ])

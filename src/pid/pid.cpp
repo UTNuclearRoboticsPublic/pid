@@ -41,47 +41,52 @@
 #include <pid/pid.h>
 
 using namespace pid_ns;
+using std::placeholders::_1;
 
-PID::PID(double Kp, double Ki, double Kd):
+PID::PID():
   Node("controller"), delta_t_(0, 0)
 {
-	// Callbacks for incoming state and setpoint messages
-  auto state_callback =
-    [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
-    {
-      plant_state_ = msg-> data;
-      RCLCPP_INFO(this->get_logger(), "State: [%f]", plant_state_)
 
-      new_state_or_setpt_ = true;
-    };
-
-  auto setpoint_callback =
-    [this](const std_msgs::msg::Float64::SharedPtr msg) -> void
-    {
-      setpoint_ = msg->data;
-      RCLCPP_INFO(this->get_logger(), "Setpoint: [%f]", setpoint_)
-
-      new_state_or_setpt_ = true;
-    };
-
-  state_sub_ = create_subscription<std_msgs::msg::Float64>(topic_from_plant_, state_callback);
-  setpoint_sub_ = create_subscription<std_msgs::msg::Float64>(setpoint_topic_, setpoint_callback);
+  state_sub_ = this->create_subscription<std_msgs::msg::Float64>(topic_from_plant_, 10, std::bind(&PID::state_callback, this, _1));
+  setpoint_sub_ = this->create_subscription<std_msgs::msg::Float64>(setpoint_topic_, 10, std::bind(&PID::setpoint_callback, this, _1));
 
   // Create a publisher with a custom Quality of Service profile.
-  rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
-  custom_qos_profile.depth = 7;
-  control_effort_pub_ = this->create_publisher<std_msgs::msg::Float64>(topic_from_controller_, custom_qos_profile);
+  // rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
+  control_effort_pub_ = this->create_publisher<std_msgs::msg::Float64>(topic_from_controller_, 10);
 
-  // TODO: get these parameters from server,
-  // along with the other configurable params (cutoff_frequency_, etc.)
-  Kp_ = Kp;
-  Ki_ = Ki;
-  Kd_ = Kd;
+  // Declare parameters
+  this->declare_parameter<double>("Kp", 1.0);
+  this->declare_parameter<double>("Ki", 0.0);
+  this->declare_parameter<double>("Kd", 0.0);
+  this->declare_parameter<double>("lower_limit", -1000.0);
+  this->declare_parameter<double>("upper_limit", 1000.0);
+  this->declare_parameter<double>("windup_limit", -1000.0);
+  this->declare_parameter<double>("cutoff_frequency", -1.0);
+  this->declare_parameter<bool>("angle_error", false);
+  this->declare_parameter<bool>("pid_enabled", true);
 
   printParameters();
 
   if (not validateParameters())
     std::cout << "Error: invalid parameter\n";
+}
+
+
+// Callbacks for incoming state message
+void PID::state_callback(const std_msgs::msg::Float64::SharedPtr msg)
+{
+  plant_state_ = msg->data;
+  RCLCPP_DEBUG(this->get_logger(), "State: [%f]", plant_state_);
+
+  new_state_or_setpt_ = true;
+}
+
+void PID::setpoint_callback(const std_msgs::msg::Float64::SharedPtr msg)
+{
+  setpoint_ = msg->data;
+  RCLCPP_DEBUG(this->get_logger(), "Setpoint: [%f]", setpoint_);
+
+  new_state_or_setpt_ = true;
 }
 
 void PID::printParameters()
@@ -120,6 +125,17 @@ void PID::doCalcs()
   // Do fresh calcs if knowledge of the system has changed.
   if (new_state_or_setpt_)
   {
+    // Get parameters from the server
+    this->get_parameter("Kp", Kp_);
+    this->get_parameter("Ki", Ki_);
+    this->get_parameter("Kd", Kd_);
+    this->get_parameter("lower_limit", lower_limit_);
+    this->get_parameter("upper_limit", upper_limit_);
+    this->get_parameter("windup_limit", windup_limit_);
+    this->get_parameter("cutoff_frequency", cutoff_frequency_);
+    this->get_parameter("angle_error", angle_error_);
+    this->get_parameter("pid_enabled", pid_enabled_);
+
     if (!((Kp_ <= 0. && Ki_ <= 0. && Kd_ <= 0.) ||
           (Kp_ >= 0. && Ki_ >= 0. && Kd_ >= 0.)))  // All 3 gains should have the same sign
     {

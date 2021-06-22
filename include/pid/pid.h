@@ -14,13 +14,15 @@ namespace pid_ns
 class PID : public rclcpp::Node
 {
 public:
-  explicit PID(double Kp, double Ki, double Kd);
+  explicit PID();
   void doCalcs();
 
   // Primary output variable
   double control_effort_ = 0;
 
 private:
+  void state_callback(const std_msgs::msg::Float64::SharedPtr msg);
+  void setpoint_callback(const std_msgs::msg::Float64::SharedPtr msg);
   void printParameters();
   bool validateParameters();
 
@@ -39,7 +41,7 @@ private:
   // PID gains
   double Kp_ = 0, Ki_ = 0, Kd_ = 0;
 
-  // Parameters for error calc. with disconinuous input
+  // Parameters for error calc. with discontinuous input
   bool angle_error_ = false;
   double angle_wrap_ = 2.0 * 3.14159;
 
@@ -93,5 +95,6 @@ private:
   std_msgs::msg::Float64 control_msg_, state_msg_;
 };
 }  // end pid namespace
+
 
 #endif

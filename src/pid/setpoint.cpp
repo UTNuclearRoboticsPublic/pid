@@ -63,20 +63,11 @@ public:
   explicit Setpoint()
   : Node("setpoint")
   {
-    msg_ = std::make_shared<std_msgs::msg::Float64>();
-
-    // Create a function for when messages are to be sent.
-    auto publish_message =
-      [this](double& setpoint) -> void
-      {
-        msg_->data = setpoint;
-        pub_->publish(msg_);
-      };
+    msg_ = std_msgs::msg::Float64();
 
     // Create a publisher with a custom Quality of Service profile.
-    rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_default;
-    custom_qos_profile.depth = 7;
-    pub_ = this->create_publisher<std_msgs::msg::Float64>("setpoint", custom_qos_profile);
+    // rclcpp::QoS custom_qos_profile(rclcpp::KeepLast(7), rmw_qos_profile_sensor_data);
+    pub_ = this->create_publisher<std_msgs::msg::Float64>("setpoint", 10);
 
     // Negate the setpoint every 5 seconds
     rclcpp::Rate loop_rate(0.2);
@@ -91,8 +82,14 @@ public:
     }
   }
 
+  void publish_message(double& setpoint)
+  {
+    msg_.data = setpoint;
+    pub_->publish(msg_);
+  }
+
 private:
-  std::shared_ptr<std_msgs::msg::Float64> msg_;
+  std_msgs::msg::Float64 msg_;
   rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_;
 };
 
