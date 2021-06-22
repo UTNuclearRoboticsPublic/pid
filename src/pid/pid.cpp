@@ -125,19 +125,17 @@ void PID::doCalcs()
   // Do fresh calcs if knowledge of the system has changed.
   if (new_state_or_setpt_)
   {
+    // Get parameters from the server
+    this->get_parameter("Kp", Kp_);
+    this->get_parameter("Ki", Ki_);
+    this->get_parameter("Kd", Kd_);
+    this->get_parameter("lower_limit", lower_limit_);
+    this->get_parameter("upper_limit", upper_limit_);
+    this->get_parameter("windup_limit", windup_limit_);
+    this->get_parameter("cutoff_frequency", cutoff_frequency_);
+    this->get_parameter("angle_error", angle_error_);
+    this->get_parameter("pid_enabled", pid_enabled_);
 
-      // Get parameters from the server
-      this->get_parameter("Kp", Kp_);
-      this->get_parameter("Ki", Ki_);
-      this->get_parameter("Kd", Kd_);
-      this->get_parameter("lower_limit", lower_limit_);
-      this->get_parameter("upper_limit", upper_limit_);
-      this->get_parameter("windup_limit", windup_limit_);
-      this->get_parameter("cutoff_frequency", cutoff_frequency_);
-      this->get_parameter("angle_error", angle_error_);
-      this->get_parameter("pid_enabled", pid_enabled_);
-
-    
     if (!((Kp_ <= 0. && Ki_ <= 0. && Kd_ <= 0.) ||
           (Kp_ >= 0. && Ki_ >= 0. && Kd_ >= 0.)))  // All 3 gains should have the same sign
     {

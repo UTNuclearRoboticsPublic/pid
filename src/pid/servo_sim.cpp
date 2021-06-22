@@ -84,12 +84,11 @@ public:
     speed_ = speed_ + (acceleration_ * delta_t_.nanoseconds()/1e9);
     displacement_ = displacement_ + speed_ * delta_t_.nanoseconds()/1e9;
     state_msg_.data = displacement_;
-
+    
     state_pub_->publish(state_msg_);
   }
 
 private:
-
   // Callback for incoming control_effort messages
   void control_effort_callback(const std_msgs::msg::Float64::SharedPtr msg)
   {
